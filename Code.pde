@@ -1,3 +1,4 @@
+PImage battleShip;  // ✅ 중심 이미지 변수 추가
 float angle = 0;
 float sweepSpeed = 0.05;
 float cx, cy, radius;
@@ -11,6 +12,9 @@ void setup() {
   noCursor();
   calcLayout();
   background(0);
+
+  // ✅ 이미지 불러오기 (data 폴더 안에 radar_center.png 넣기)
+  battleShip = loadImage("BattleShip.png");
 }
 
 void draw() {
@@ -39,30 +43,16 @@ void draw() {
   line(-radius, 0, radius, 0);
   line(0, -radius, 0, radius);
 
-  // 스윕 빔
-  float beamWidth = radians(24);
-  float a1 = angle - beamWidth / 2.0;
-  float a2 = angle + beamWidth / 2.0;
-
-  noStroke();
-  fill(0, 255, 120, 50);
-  beginShape();
-  vertex(0, 0);
-  vertex(cos(a1) * radius, sin(a1) * radius);
-  vertex(cos(a2) * radius, sin(a2) * radius);
-  endShape(CLOSE);
-
-  // 스윕 라인
+  // ✅ 스윕 라인 (한 줄만)
   stroke(0, 255, 160);
   strokeWeight(3);
   line(0, 0, cos(angle) * radius, sin(angle) * radius);
 
-  popMatrix();
+  // ✅ 중심 이미지 표시
+  imageMode(CENTER); // 중심 좌표 기준
+  image(battleShip, 0, 0, 80, 80); // 이미지 크기 (80x80)
 
-  // 중심점 표시
-  noStroke();
-  fill(0, 255, 120);
-  circle(cx, cy, 8);
+  popMatrix();
 
   // 각도 증가
   angle += sweepSpeed;
@@ -71,6 +61,6 @@ void draw() {
 
 void calcLayout() {
   cx = width / 2.0;
-  cy = height / 2.0;   // ✅ 화면 정중앙
+  cy = height / 2.0;   // 화면 정중앙
   radius = min(width, height) * 0.4;
 }

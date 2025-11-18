@@ -29,9 +29,10 @@ class TextTarget {
   }
 
   void display() {
-    fill(255, 255, 0); // 노란색
+    fill(255, 255, 0);
     textAlign(CENTER, CENTER);
     textSize(22);
+    textFont(f);
     text(word, pos.x, pos.y);
   }
 }
@@ -69,7 +70,15 @@ class Sonar {
 ArrayList<TextTarget> targets = new ArrayList<TextTarget>();
 ArrayList<Sonar> sonars = new ArrayList<Sonar>();
 
-String[] vocabulary = { "비행기", "바나나", "역삼역", "강남역", "카카오", "신세계", "아마존", "소화기" };
+String[] vocabulary = { 
+  "radar", "signal", "target", "echo", "sonar", 
+  "ocean", "shadow", "phantom", "pirate", "voyager",
+  "rocket", "missile", "enemy", "vector", "horizon",
+  "storm", "danger", "system", "rescue", "engine"
+};
+
+// ======================= TYPING =======================
+String typedText = "";
 
 // ======================= SETUP =======================
 void settings() { fullScreen(); }
@@ -81,8 +90,7 @@ void setup() {
   background(0);
   battleShip = loadImage("BattleShip.png");
 
-  // ✅ 한글 폰트 로드
-  f = createFont("Malgun Gothic", 24, true);  
+  f = createFont("Malgun Gothic", 24, true);
   textFont(f);
 }
 
@@ -96,14 +104,14 @@ void draw() {
   pushMatrix();
   translate(cx,cy);
 
-  // ✅ 소나 파동
+  // 소나 파동
   for (int i = sonars.size()-1; i >= 0; i--) {
     Sonar s = sonars.get(i);
     s.update();
     if (!s.active) sonars.remove(i);
   }
 
-  // ✅ 레이더 원 (6개 + 넓은 간격)
+  // 레이더 원
   stroke(0,255,120,160);
   noFill();
   strokeWeight(2);
@@ -113,30 +121,71 @@ void draw() {
     ellipse(0,0,r*2,r*2);
   }
 
-  // ✅ 십자선 (가장 큰 원과 동일 비율)
+  // 십자선
   stroke(0,255,120,120);
   float cross = radius * 1.15;
   line(-cross, 0, cross, 0);
   line(0, -cross, 0, cross);
 
-  // ✅ 단어 이동 및 출력
+  // 타겟 이동
   for (int i = targets.size()-1; i >= 0; i--) {
     TextTarget t = targets.get(i);
     if (t.update()) targets.remove(i);
     else t.display();
   }
 
-  // ✅ 배 이미지
+  // 배 이미지
   imageMode(CENTER);
   float scale = radius * 0.35 / battleShip.height;
   image(battleShip, 0,0, battleShip.width*scale, battleShip.height*scale);
 
   popMatrix();
 
-  // ✅ 주기적으로 텍스트 생성
+  // 단어 생성
   if (frameCount % 40 == 0) {
     String w = vocabulary[int(random(vocabulary.length))];
     targets.add(new TextTarget(w));
+  }
+
+  // 입력 HUD
+  fill(0,255,120,240);
+  textAlign(LEFT, CENTER);
+  textSize(30);
+  text("입력: " + typedText, width * 0.1, height * 0.9);
+}
+
+// ======================= 정답 체크 =======================
+void checkTypedWord() {
+  for (int i = targets.size()-1; i >= 0; i--) {
+    if (targets.get(i).word.equals(typedText)) {
+      targets.remove(i);
+    }
+  }
+}
+
+// ======================= KEY INPUT =======================
+void keyPressed() {
+
+  if (key == ' ') {
+    sonars.add(new Sonar(frameCount, radius));
+    return;
+  }
+
+  if (key == BACKSPACE) {
+    if (typedText.length() > 0) {
+      typedText = typedText.substring(0, typedText.length() - 1);
+    }
+    return;
+  }
+
+  if (key == ENTER || key == RETURN) {
+    checkTypedWord();
+    typedText = "";
+    return;
+  }
+
+  if (key != CODED) {
+    typedText += key;
   }
 }
 
@@ -145,11 +194,4 @@ void calcLayout() {
   cx = width/2.0;
   cy = height/2.0;
   radius = min(width,height)*0.4;
-}
-
-// ======================= SPACEBAR = SONAR =======================
-void keyPressed() {
-  if (key == ' ') {
-    sonars.add(new Sonar(frameCount, radius));
-  }
 }

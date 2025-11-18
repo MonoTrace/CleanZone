@@ -1,3 +1,8 @@
+import ddf.minim.*;   // 🔥 Minim 라이브러리 추가
+
+Minim minim;
+AudioPlayer bgm;
+
 PImage battleShip;
 float cx, cy, radius;
 PFont f;
@@ -9,16 +14,19 @@ class TextTarget {
   PVector vel;
   float speed;
 
+  boolean isVisible = false;
+  int visibleUntilFrame = 0;
+
   TextTarget(String w) {
     word = w;
-    
+
     float a = random(TWO_PI);
     pos = new PVector(cos(a) * radius, sin(a) * radius);
 
-    PVector dir = PVector.sub(new PVector(0,0), pos);
+    PVector dir = PVector.sub(new PVector(0, 0), pos);
     dir.normalize();
 
-    speed = 1.0f;
+    speed = 0.5f;  // 속도 줄여서 난이도 낮춤
     vel = dir.copy().mult(speed);
   }
 
@@ -29,11 +37,17 @@ class TextTarget {
   }
 
   void display() {
-    fill(255, 255, 0);
+    if (isVisible) fill(255, 255, 0, 255);
+    else fill(255, 255, 0, 0); // 완전 투명
+
     textAlign(CENTER, CENTER);
     textSize(22);
     textFont(f);
     text(word, pos.x, pos.y);
+
+    if (isVisible && frameCount > visibleUntilFrame) {
+      isVisible = false;
+    }
   }
 }
 
@@ -60,9 +74,9 @@ class Sonar {
     if (alpha <= 0) active = false;
 
     noFill();
-    stroke(0,255,120, alpha);
+    stroke(0, 255, 120, alpha);
     strokeWeight(2);
-    ellipse(0,0,r*2,r*2);
+    ellipse(0, 0, r * 2, r * 2);
   }
 }
 
@@ -70,14 +84,13 @@ class Sonar {
 ArrayList<TextTarget> targets = new ArrayList<TextTarget>();
 ArrayList<Sonar> sonars = new ArrayList<Sonar>();
 
-String[] vocabulary = { 
-  "radar", "signal", "target", "echo", "sonar", 
+String[] vocabulary = {
+  "radar", "signal", "target", "echo", "sonar",
   "ocean", "shadow", "phantom", "pirate", "voyager",
   "rocket", "missile", "enemy", "vector", "horizon",
   "storm", "danger", "system", "rescue", "engine"
 };
 
-// ======================= TYPING =======================
 String typedText = "";
 
 // ======================= SETUP =======================
@@ -88,6 +101,13 @@ void setup() {
   noCursor();
   calcLayout();
   background(0);
+
+  // 🔥 BGM 시작
+  minim = new Minim(this);
+  bgm = minim.loadFile("SuddenAttack.mp3");   // data 폴더 안에 넣기
+  bgm.loop();
+  bgm.setGain(-5);          // 볼륨 (dB) -5는 약 60~70% 정도
+
   battleShip = loadImage("BattleShip.png");
 
   f = createFont("Malgun Gothic", 24, true);
@@ -97,58 +117,66 @@ void setup() {
 // ======================= DRAW =======================
 void draw() {
   noStroke();
-  fill(0,0,0,45);
-  rect(0,0,width,height);
+  fill(0, 0, 0, 45);
+  rect(0, 0, width, height);
 
   calcLayout();
   pushMatrix();
-  translate(cx,cy);
+  translate(cx, cy);
 
-  // 소나 파동
-  for (int i = sonars.size()-1; i >= 0; i--) {
+  for (int i = sonars.size() - 1; i >= 0; i--) {
     Sonar s = sonars.get(i);
     s.update();
     if (!s.active) sonars.remove(i);
   }
 
-  // 레이더 원
-  stroke(0,255,120,160);
+  // 🔥 소나와 단어 충돌 체크
+  for (Sonar s : sonars) {
+    float age = frameCount - s.startFrame;
+    float r = s.maxRadius * min(1, age / 60.0) * 1.15;
+
+    for (TextTarget t : targets) {
+      float d = dist(0, 0, t.pos.x, t.pos.y);
+
+      if (d < r && !t.isVisible) {
+        t.isVisible = true;
+        t.visibleUntilFrame = frameCount + 120; // 2초간 보임
+      }
+    }
+  }
+
+  stroke(0, 255, 120, 160);
   noFill();
   strokeWeight(2);
   int rings = 6;
   for (int i = 1; i <= rings; i++) {
     float r = (radius / rings) * i * 1.15;
-    ellipse(0,0,r*2,r*2);
+    ellipse(0, 0, r * 2, r * 2);
   }
 
-  // 십자선
-  stroke(0,255,120,120);
+  stroke(0, 255, 120, 120);
   float cross = radius * 1.15;
   line(-cross, 0, cross, 0);
   line(0, -cross, 0, cross);
 
-  // 타겟 이동
-  for (int i = targets.size()-1; i >= 0; i--) {
+  for (int i = targets.size() - 1; i >= 0; i--) {
     TextTarget t = targets.get(i);
     if (t.update()) targets.remove(i);
     else t.display();
   }
 
-  // 배 이미지
   imageMode(CENTER);
   float scale = radius * 0.35 / battleShip.height;
-  image(battleShip, 0,0, battleShip.width*scale, battleShip.height*scale);
+  image(battleShip, 0, 0, battleShip.width * scale, battleShip.height * scale);
 
   popMatrix();
 
-  // 단어 생성
-  if (frameCount % 40 == 0) {
+  if (frameCount % 80 == 0) {
     String w = vocabulary[int(random(vocabulary.length))];
     targets.add(new TextTarget(w));
   }
 
-  // 입력 HUD
-  fill(0,255,120,240);
+  fill(0, 255, 120, 240);
   textAlign(LEFT, CENTER);
   textSize(30);
   text("입력: " + typedText, width * 0.1, height * 0.9);
@@ -156,7 +184,7 @@ void draw() {
 
 // ======================= 정답 체크 =======================
 void checkTypedWord() {
-  for (int i = targets.size()-1; i >= 0; i--) {
+  for (int i = targets.size() - 1; i >= 0; i--) {
     if (targets.get(i).word.equals(typedText)) {
       targets.remove(i);
     }
@@ -191,7 +219,7 @@ void keyPressed() {
 
 // ======================= LAYOUT =======================
 void calcLayout() {
-  cx = width/2.0;
-  cy = height/2.0;
-  radius = min(width,height)*0.4;
+  cx = width / 2.0;
+  cy = height / 2.0;
+  radius = min(width, height) * 0.4;
 }

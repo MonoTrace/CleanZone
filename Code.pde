@@ -1,4 +1,4 @@
-import ddf.minim.*;   // 🔥 Minim 라이브러리 추가
+import ddf.minim.*;   // Minim 라이브러리 추가
 
 Minim minim;
 AudioPlayer bgm;
@@ -26,7 +26,7 @@ class TextTarget {
     PVector dir = PVector.sub(new PVector(0, 0), pos);
     dir.normalize();
 
-    speed = 0.5f;  // 속도 줄여서 난이도 낮춤
+    speed = 0.5f;  // 단어 속도
     vel = dir.copy().mult(speed);
   }
 
@@ -38,7 +38,7 @@ class TextTarget {
 
   void display() {
     if (isVisible) fill(255, 255, 0, 255);
-    else fill(255, 255, 0, 0); // 완전 투명
+    else fill(255, 255, 0, 0);
 
     textAlign(CENTER, CENTER);
     textSize(22);
@@ -64,8 +64,8 @@ class Sonar {
 
   void update() {
     float age = frameCount - startFrame;
-    float growT = 60;
-    float fadeT = 120;
+    float growT = 15;
+    float fadeT = 30;
 
     float progress = min(1, age / growT);
     float r = maxRadius * progress * 1.15;
@@ -93,6 +93,9 @@ String[] vocabulary = {
 
 String typedText = "";
 
+// ======================= SPAWN CONTROL =======================
+int spawnInterval = 60;   // 처음엔 1초마다 단어 생성
+
 // ======================= SETUP =======================
 void settings() { fullScreen(); }
 
@@ -102,11 +105,11 @@ void setup() {
   calcLayout();
   background(0);
 
-  // 🔥 BGM 시작
+  // BGM 시작
   minim = new Minim(this);
-  bgm = minim.loadFile("SuddenAttack.mp3");   // data 폴더 안에 넣기
+  bgm = minim.loadFile("SuddenAttack.mp3");
   bgm.loop();
-  bgm.setGain(-5);          // 볼륨 (dB) -5는 약 60~70% 정도
+  bgm.setGain(-5);
 
   battleShip = loadImage("BattleShip.png");
 
@@ -124,20 +127,20 @@ void draw() {
   pushMatrix();
   translate(cx, cy);
 
+  // ------------------- 소나 업데이트 -------------------
   for (int i = sonars.size() - 1; i >= 0; i--) {
     Sonar s = sonars.get(i);
     s.update();
     if (!s.active) sonars.remove(i);
   }
 
-  // 🔥 소나와 단어 충돌 체크
+  // 소나와 단어 충돌 체크
   for (Sonar s : sonars) {
     float age = frameCount - s.startFrame;
     float r = s.maxRadius * min(1, age / 60.0) * 1.15;
 
     for (TextTarget t : targets) {
       float d = dist(0, 0, t.pos.x, t.pos.y);
-
       if (d < r && !t.isVisible) {
         t.isVisible = true;
         t.visibleUntilFrame = frameCount + 120; // 2초간 보임
@@ -145,6 +148,7 @@ void draw() {
     }
   }
 
+  // ------------------- 소나 원 표시 -------------------
   stroke(0, 255, 120, 160);
   noFill();
   strokeWeight(2);
@@ -159,23 +163,39 @@ void draw() {
   line(-cross, 0, cross, 0);
   line(0, -cross, 0, cross);
 
+  // ------------------- 단어 업데이트 -------------------
   for (int i = targets.size() - 1; i >= 0; i--) {
     TextTarget t = targets.get(i);
     if (t.update()) targets.remove(i);
     else t.display();
   }
 
+  // ------------------- 배틀쉽 표시 -------------------
   imageMode(CENTER);
   float scale = radius * 0.35 / battleShip.height;
   image(battleShip, 0, 0, battleShip.width * scale, battleShip.height * scale);
 
   popMatrix();
 
-  if (frameCount % 80 == 0) {
+  // ------------------- 단어 생성 -------------------
+  // 30초(1800프레임) 지나면 생성 속도 빨라짐
+  if (frameCount == 1800) {
+    spawnInterval = 30;   // 0.5초마다 1개 생성
+  }
+
+  if (frameCount % spawnInterval == 0) {
     String w = vocabulary[int(random(vocabulary.length))];
     targets.add(new TextTarget(w));
   }
 
+  // ------------------- 오른쪽 하단에 경과 시간 표시 -------------------
+  int seconds = frameCount / 60;
+  fill(0, 255, 120, 255);
+  textAlign(RIGHT, BOTTOM);
+  textSize(24);
+  text("시간: " + seconds + "s", width - 20, height - 20);
+
+  // ------------------- 입력 표시 -------------------
   fill(0, 255, 120, 240);
   textAlign(LEFT, CENTER);
   textSize(30);
@@ -191,9 +211,8 @@ void checkTypedWord() {
   }
 }
 
-// ======================= KEY INPUT =======================
+// ======================= 키 입력 =======================
 void keyPressed() {
-
   if (key == ' ') {
     sonars.add(new Sonar(frameCount, radius));
     return;
@@ -217,7 +236,7 @@ void keyPressed() {
   }
 }
 
-// ======================= LAYOUT =======================
+// ======================= 레이아웃 계산 =======================
 void calcLayout() {
   cx = width / 2.0;
   cy = height / 2.0;

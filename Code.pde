@@ -64,8 +64,8 @@ class Sonar {
 
   void update() {
     float age = frameCount - startFrame;
-    float growT = 15;
-    float fadeT = 30;
+    float growT = 60;
+    float fadeT = 120;
 
     float progress = min(1, age / growT);
     float r = maxRadius * progress * 1.15;
@@ -94,7 +94,7 @@ String[] vocabulary = {
 String typedText = "";
 
 // ======================= SPAWN CONTROL =======================
-int spawnInterval = 60;   // 처음엔 1초마다 단어 생성
+int spawnInterval = 120;   // 처음엔 1초마다 단어 생성
 
 // ======================= SETUP =======================
 void settings() { fullScreen(); }
@@ -178,9 +178,13 @@ void draw() {
   popMatrix();
 
   // ------------------- 단어 생성 -------------------
-  // 30초(1800프레임) 지나면 생성 속도 빨라짐
+  // 지나면 생성 속도 빨라짐
+  if (frameCount == 900) {
+    spawnInterval = 90;   // 1.5초마다 1개 생성
+  }
+  
   if (frameCount == 1800) {
-    spawnInterval = 30;   // 0.5초마다 1개 생성
+    spawnInterval = 60;   // 1.5초마다 1개 생성
   }
 
   if (frameCount % spawnInterval == 0) {

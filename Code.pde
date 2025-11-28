@@ -8,6 +8,10 @@ PImage battleShip;
 float cx, cy, radius;
 PFont f;
 
+// ======================= 체력 =======================
+int maxHealth = 100;
+int health = 100;
+
 // ======================= TEXT TARGET =======================
 class TextTarget {
   String word;
@@ -17,6 +21,7 @@ class TextTarget {
 
   boolean isVisible = false;
   int visibleUntilFrame = 0;
+  boolean hitOnce = false; // 중앙 도달 시 체력 감소 여부
 
   TextTarget(String w) {
     word = w;
@@ -33,6 +38,14 @@ class TextTarget {
 
   boolean update() {
     pos.add(vel);
+
+    // 중앙 도달 체크
+    if (pos.mag() < 20 && !hitOnce) {
+      health -= 10;
+      if (health < 0) health = 0;
+      hitOnce = true;
+    }
+
     if (pos.mag() < 6) return true;
     return false;
   }
@@ -95,7 +108,7 @@ String[] vocabulary = {
 String typedText = "";
 
 // ======================= SPAWN CONTROL =======================
-int spawnInterval = 120;   // 처음엔 1초마다 단어 생성
+int spawnInterval = 120;   // 처음엔 2초마다 단어 생성
 
 // ======================= SETUP =======================
 void settings() { fullScreen(); }
@@ -137,7 +150,7 @@ void draw() {
     if (!s.active) sonars.remove(i);
   }
 
-  // 소나와 단어 충돌 체크
+  // ------------------- 소나와 단어 충돌 체크 -------------------
   for (Sonar s : sonars) {
     float age = frameCount - s.startFrame;
     float r = s.maxRadius * min(1, age / 60.0) * 1.15;
@@ -189,6 +202,27 @@ void draw() {
     targets.add(new TextTarget(w));
   }
 
+  // ------------------- 입력창 바로 위 체력 바 -------------------
+  float barWidth = width * 0.1; // 폭 대폭 축소
+  float barHeight = 20;
+  float barX = width * 0.1;   // 중앙 정렬
+  float barY = height * 0.85 - 50; // 입력창 바로 위
+
+  fill(80);
+  rect(barX, barY, barWidth, barHeight); // 배경
+  fill(0, 255, 0);
+  rect(barX, barY, barWidth * (health / float(maxHealth)), barHeight); // 체력
+
+  // 게임오버 체크
+  if (health <= 0) {
+    fill(255, 0, 0);
+    textAlign(CENTER, CENTER);
+    textSize(60);
+    text("GAME OVER", width/2, height/2);
+    noLoop(); // 게임 멈춤
+    return;
+  }
+
   // ------------------- 오른쪽 하단에 경과 시간 표시 -------------------
   int seconds = frameCount / 60;
   fill(0, 255, 120, 255);
@@ -200,7 +234,7 @@ void draw() {
   fill(0, 255, 120, 240);
   textAlign(LEFT, CENTER);
   textSize(30);
-  text("입력: " + typedText, width * 0.1, height * 0.9);
+  text("입력: " + typedText, width * 0.1, height * 0.85);
 }
 
 // ======================= 정답 체크 =======================

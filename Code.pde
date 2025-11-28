@@ -194,8 +194,8 @@ void draw() {
   popMatrix();
 
   // ------------------- 단어 생성 -------------------
-  if (frameCount == 900) spawnInterval = 90;
-  if (frameCount == 1800) spawnInterval = 60;
+  if (frameCount == 900) spawnInterval = 80;
+  if (frameCount == 1800) spawnInterval = 50;
 
   if (frameCount % spawnInterval == 0) {
     String w = vocabulary[int(random(vocabulary.length))];
@@ -203,9 +203,9 @@ void draw() {
   }
 
   // ------------------- 입력창 바로 위 체력 바 -------------------
-  float barWidth = width * 0.1; // 폭 대폭 축소
+  float barWidth = width * 0.1; // 폭 축소
   float barHeight = 20;
-  float barX = width * 0.1;   // 중앙 정렬
+  float barX = width * 0.1;   
   float barY = height * 0.85 - 50; // 입력창 바로 위
 
   fill(80);
@@ -223,12 +223,38 @@ void draw() {
     return;
   }
 
-  // ------------------- 오른쪽 하단에 경과 시간 표시 -------------------
-  int seconds = frameCount / 60;
+ int seconds = frameCount / 60;
+String difficulty = "Easy";
+color difficultyColor = color(0, 200, 255); // 기본 하늘색
+
+if (seconds < 15) {
+  difficulty = "Easy  ";
+  difficultyColor = color(0, 200, 255);
+} else if (seconds < 30) {
+  difficulty = "Medium";
+  difficultyColor = color(255, 165, 0);
+} else {
+  difficulty = "Difficult";
+  difficultyColor = color(255, 0, 0);
+}
+
+textAlign(RIGHT, BOTTOM);
+textSize(20);
+
+// "난이도:" 초록색
+fill(0, 255, 120);
+text("난이도:", width - 100, height - 50);
+
+// 난이도 값 바로 옆에 지정 색상
+fill(difficultyColor);
+text(difficulty, width - 20, height - 50);
+
+
+  // ------------------- 오른쪽 하단 시간 표시 -------------------
   fill(0, 255, 120, 255);
   textAlign(RIGHT, BOTTOM);
   textSize(24);
-  text("시간: " + seconds + "s", width - 20, height - 20);
+  text("시간: " + seconds + "초", width - 20, height - 20);
 
   // ------------------- 입력 표시 -------------------
   fill(0, 255, 120, 240);

@@ -12,6 +12,12 @@ PFont f;
 int maxHealth = 100;
 int health = 100;
 
+// ======================= 점수 =======================
+int score = 0;
+
+// ======================= 게임 상태 =======================
+boolean isGameOver = false;
+
 // ======================= TEXT TARGET =======================
 class TextTarget {
   String word;
@@ -99,11 +105,22 @@ ArrayList<TextTarget> targets = new ArrayList<TextTarget>();
 ArrayList<Sonar> sonars = new ArrayList<Sonar>();
 
 String[] vocabulary = {
-  "radar", "signal", "target", "echo", "sonar",
-  "ocean", "shadow", "phantom", "pirate", "voyager",
-  "rocket", "missile", "enemy", "vector", "horizon",
-  "storm", "danger", "system", "rescue", "engine"
+  // 미국 (USN)
+  "iowa", "wasp", "texas", "essex", "salem", "gato", "sims",
+
+  // 영국 (Royal Navy)
+  "hood", "dido", "ajax", "york", "howe", "eagle", "tiger",
+
+  // 일본 (IJN)
+  "yamato", "mutsu", "kaga", "akagi", "kongo", "ise", "fuso", "maya",
+
+  // 독일 (Kriegsmarine)
+  "emden", "koln",
+
+  // 기타 (러시아, 이탈리아, 프랑스)
+  "kirov", "kiev", "roma", "zara", "pola", "foch"
 };
+
 
 String typedText = "";
 
@@ -139,128 +156,145 @@ void draw() {
   fill(0, 0, 0, 45);
   rect(0, 0, width, height);
 
-  calcLayout();
-  pushMatrix();
-  translate(cx, cy);
+  if (!isGameOver) {
+    calcLayout();
+    pushMatrix();
+    translate(cx, cy);
 
-  // ------------------- 소나 업데이트 -------------------
-  for (int i = sonars.size() - 1; i >= 0; i--) {
-    Sonar s = sonars.get(i);
-    s.update();
-    if (!s.active) sonars.remove(i);
-  }
+    // ------------------- 소나 업데이트 -------------------
+    for (int i = sonars.size() - 1; i >= 0; i--) {
+      Sonar s = sonars.get(i);
+      s.update();
+      if (!s.active) sonars.remove(i);
+    }
 
-  // ------------------- 소나와 단어 충돌 체크 -------------------
-  for (Sonar s : sonars) {
-    float age = frameCount - s.startFrame;
-    float r = s.maxRadius * min(1, age / 60.0) * 1.15;
+    // ------------------- 소나와 단어 충돌 체크 -------------------
+    for (Sonar s : sonars) {
+      float age = frameCount - s.startFrame;
+      float r = s.maxRadius * min(1, age / 60.0) * 1.15;
 
-    for (TextTarget t : targets) {
-      float d = dist(0, 0, t.pos.x, t.pos.y);
-      if (d < r && !t.isVisible) {
-        t.isVisible = true;
-        t.visibleUntilFrame = frameCount + 120; // 2초간 보임
+      for (TextTarget t : targets) {
+        float d = dist(0, 0, t.pos.x, t.pos.y);
+        if (d < r && !t.isVisible) {
+          t.isVisible = true;
+          t.visibleUntilFrame = frameCount + 120; // 2초간 보임
+        }
       }
     }
-  }
 
-  // ------------------- 소나 원 표시 -------------------
-  stroke(0, 255, 120, 160);
-  noFill();
-  strokeWeight(2);
-  int rings = 6;
-  for (int i = 1; i <= rings; i++) {
-    float r = (radius / rings) * i * 1.15;
-    ellipse(0, 0, r * 2, r * 2);
-  }
+    // ------------------- 소나 원 표시 -------------------
+    stroke(0, 255, 120, 160);
+    noFill();
+    strokeWeight(2);
+    int rings = 6;
+    for (int i = 1; i <= rings; i++) {
+      float r = (radius / rings) * i * 1.15;
+      ellipse(0, 0, r * 2, r * 2);
+    }
 
-  stroke(0, 255, 120, 120);
-  float cross = radius * 1.15;
-  line(-cross, 0, cross, 0);
-  line(0, -cross, 0, cross);
+    stroke(0, 255, 120, 120);
+    float cross = radius * 1.15;
+    line(-cross, 0, cross, 0);
+    line(0, -cross, 0, cross);
 
-  // ------------------- 단어 업데이트 -------------------
-  for (int i = targets.size() - 1; i >= 0; i--) {
-    TextTarget t = targets.get(i);
-    if (t.update()) targets.remove(i);
-    else t.display();
-  }
+    // ------------------- 단어 업데이트 -------------------
+    for (int i = targets.size() - 1; i >= 0; i--) {
+      TextTarget t = targets.get(i);
+      if (t.update()) targets.remove(i);
+      else t.display();
+    }
 
-  // ------------------- 배틀쉽 표시 -------------------
-  imageMode(CENTER);
-  float scale = radius * 0.35 / battleShip.height;
-  image(battleShip, 0, 0, battleShip.width * scale, battleShip.height * scale);
+    // ------------------- 배틀쉽 표시 -------------------
+    imageMode(CENTER);
+    float scale = radius * 0.35 / battleShip.height;
+    image(battleShip, 0, 0, battleShip.width * scale, battleShip.height * scale);
 
-  popMatrix();
+    popMatrix();
 
-  // ------------------- 단어 생성 -------------------
-  if (frameCount == 900) spawnInterval = 80;
-  if (frameCount == 1800) spawnInterval = 50;
+    // ------------------- 단어 생성 -------------------
+    if (frameCount == 900) spawnInterval = 80;
+    if (frameCount == 1800) spawnInterval = 50;
 
-  if (frameCount % spawnInterval == 0) {
-    String w = vocabulary[int(random(vocabulary.length))];
-    targets.add(new TextTarget(w));
-  }
+    if (frameCount % spawnInterval == 0) {
+      String w = vocabulary[int(random(vocabulary.length))];
+      targets.add(new TextTarget(w));
+    }
 
-  // ------------------- 입력창 바로 위 체력 바 -------------------
-  float barWidth = width * 0.1; // 폭 축소
-  float barHeight = 20;
-  float barX = width * 0.1;   
-  float barY = height * 0.85 - 50; // 입력창 바로 위
+    // ------------------- 입력창 바로 위 체력 바 -------------------
+    float barWidth = width * 0.1;
+    float barHeight = 20;
+    float barX = width * 0.1;   
+    float barY = height * 0.85 - 50; // 입력창 바로 위
 
-  fill(80);
-  rect(barX, barY, barWidth, barHeight); // 배경
-  fill(0, 255, 0);
-  rect(barX, barY, barWidth * (health / float(maxHealth)), barHeight); // 체력
+    // 배경
+    fill(50);
+    rect(barX, barY, barWidth, barHeight, 5);
+    // 체력 게이지
+    fill(0, 255, 0);
+    rect(barX, barY, barWidth * (health / float(maxHealth)), barHeight, 5);
 
-  // 게임오버 체크
-  if (health <= 0) {
+    // ------------------- 점수 표시 -------------------
+    fill(0, 255, 120);
+    textAlign(LEFT, CENTER);
+    textSize(24);
+    text("점수: " + score, width * 0.1, height * 0.05);
+
+    // ------------------- 게임오버 체크 -------------------
+    if (health <= 0) {
+      isGameOver = true;
+    }
+
+    // ------------------- 오른쪽 하단 난이도 표시 -------------------
+    int seconds = frameCount / 60;
+    String difficulty = "Easy";
+    color difficultyColor = color(0, 200, 255); // 기본 하늘색
+
+    if (seconds < 15) {
+      difficulty = "Easy  ";
+      difficultyColor = color(0, 200, 255);
+    } else if (seconds < 30) {
+      difficulty = "Medium";
+      difficultyColor = color(255, 165, 0);
+    } else {
+      difficulty = "Difficult";
+      difficultyColor = color(255, 0, 0);
+    }
+
+    textAlign(RIGHT, BOTTOM);
+    textSize(20);
+
+    fill(0, 255, 120);
+    text("난이도:", width - 100, height - 50);
+
+    fill(difficultyColor);
+    text(difficulty, width - 20, height - 50);
+
+    // ------------------- 오른쪽 하단 시간 표시 -------------------
+    fill(0, 255, 120, 255);
+    textAlign(RIGHT, BOTTOM);
+    textSize(24);
+    text("시간: " + seconds + "초", width - 20, height - 20);
+
+    // ------------------- 입력 표시 -------------------
+    fill(0, 255, 120, 240);
+    textAlign(LEFT, CENTER);
+    textSize(30);
+    text("입력: " + typedText, width * 0.1, height * 0.85);
+
+  } else {
+    // 게임오버 화면
     fill(255, 0, 0);
     textAlign(CENTER, CENTER);
     textSize(60);
-    text("GAME OVER", width/2, height/2);
-    noLoop(); // 게임 멈춤
-    return;
+    text("GAME OVER", width / 2, height / 2);
+
+    textSize(30);
+    fill(255);
+    text("최종 점수: " + score, width / 2, height / 2 + 50);
+
+    textSize(24);
+    text("아무 키나 눌러 재시작", width / 2, height / 2 + 100);
   }
-
- int seconds = frameCount / 60;
-String difficulty = "Easy";
-color difficultyColor = color(0, 200, 255); // 기본 하늘색
-
-if (seconds < 15) {
-  difficulty = "Easy  ";
-  difficultyColor = color(0, 200, 255);
-} else if (seconds < 30) {
-  difficulty = "Medium";
-  difficultyColor = color(255, 165, 0);
-} else {
-  difficulty = "Difficult";
-  difficultyColor = color(255, 0, 0);
-}
-
-textAlign(RIGHT, BOTTOM);
-textSize(20);
-
-// "난이도:" 초록색
-fill(0, 255, 120);
-text("난이도:", width - 100, height - 50);
-
-// 난이도 값 바로 옆에 지정 색상
-fill(difficultyColor);
-text(difficulty, width - 20, height - 50);
-
-
-  // ------------------- 오른쪽 하단 시간 표시 -------------------
-  fill(0, 255, 120, 255);
-  textAlign(RIGHT, BOTTOM);
-  textSize(24);
-  text("시간: " + seconds + "초", width - 20, height - 20);
-
-  // ------------------- 입력 표시 -------------------
-  fill(0, 255, 120, 240);
-  textAlign(LEFT, CENTER);
-  textSize(30);
-  text("입력: " + typedText, width * 0.1, height * 0.85);
 }
 
 // ======================= 정답 체크 =======================
@@ -268,14 +302,20 @@ void checkTypedWord() {
   for (int i = targets.size() - 1; i >= 0; i--) {
     if (targets.get(i).word.equals(typedText)) {
       targets.remove(i);
-      dieSound.rewind(); // 재생 위치 초기화
-      dieSound.play();   // 단어 맞출 때 효과음 재생
+      dieSound.rewind();
+      dieSound.play();
+      score += 100; // 점수 100 증가
     }
   }
 }
 
 // ======================= 키 입력 =======================
 void keyPressed() {
+  if (isGameOver) {
+    restartGame();
+    return;
+  }
+
   if (key == ' ') {
     sonars.add(new Sonar(frameCount, radius));
     return;
@@ -297,6 +337,17 @@ void keyPressed() {
   if (key != CODED) {
     typedText += key;
   }
+}
+
+// ======================= 게임 재시작 =======================
+void restartGame() {
+  health = maxHealth;
+  score = 0;
+  targets.clear();
+  sonars.clear();
+  typedText = "";
+  frameCount = 0;
+  isGameOver = false;
 }
 
 // ======================= 레이아웃 계산 =======================

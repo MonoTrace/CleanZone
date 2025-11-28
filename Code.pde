@@ -2,6 +2,7 @@ import ddf.minim.*;   // Minim 라이브러리 추가
 
 Minim minim;
 AudioPlayer bgm;
+AudioPlayer dieSound;  // 단어 맞출 때 재생
 
 PImage battleShip;
 float cx, cy, radius;
@@ -111,6 +112,8 @@ void setup() {
   bgm.loop();
   bgm.setGain(-5);
 
+  dieSound = minim.loadFile("DieSound.mp3"); // 단어 맞출 때 재생
+
   battleShip = loadImage("BattleShip.png");
 
   f = createFont("Malgun Gothic", 24, true);
@@ -178,14 +181,8 @@ void draw() {
   popMatrix();
 
   // ------------------- 단어 생성 -------------------
-  // 지나면 생성 속도 빨라짐
-  if (frameCount == 900) {
-    spawnInterval = 90;   // 1.5초마다 1개 생성
-  }
-  
-  if (frameCount == 1800) {
-    spawnInterval = 60;   // 1.5초마다 1개 생성
-  }
+  if (frameCount == 900) spawnInterval = 90;
+  if (frameCount == 1800) spawnInterval = 60;
 
   if (frameCount % spawnInterval == 0) {
     String w = vocabulary[int(random(vocabulary.length))];
@@ -211,6 +208,8 @@ void checkTypedWord() {
   for (int i = targets.size() - 1; i >= 0; i--) {
     if (targets.get(i).word.equals(typedText)) {
       targets.remove(i);
+      dieSound.rewind(); // 재생 위치 초기화
+      dieSound.play();   // 단어 맞출 때 효과음 재생
     }
   }
 }
